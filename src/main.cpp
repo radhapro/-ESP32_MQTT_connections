@@ -5,7 +5,9 @@
 // --- YE 2 LINE AAPKO BADALNI HAIN ---
 const char* ssid = "Robozz Lab";
 const char* password = "Robotics@cloud";
- const char* mqtt_server = "broker.hivemq.com";
+  // ------------------------------------
+
+const char* mqtt_server = "broker.hivemq.com";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -27,10 +29,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void reconnect() {
   while (!client.connected()) {
     Serial.print("MQTT Broker se judne ki koshish...");
-    if (client.connect("Mera_ESP32_Receiver")) {
+    if (client.connect("Mera_ESP32_Full")) {
       Serial.println(" jud gaya!");
       
-      // --- SIRF YE EK LINE IMPORTANT HAI ---
       // Connection judte hi, is channel ko sunna shuru kar do
       client.subscribe("esp32/command");
       Serial.println("Ab main 'esp32/command' topic ko sun raha hoon...");
@@ -54,12 +55,17 @@ void setup() {
   }
   Serial.println(" WiFi jud gaya!");
   client.setServer(mqtt_server, 1883);
-  client.setCallback(callback); // Message aane par kya karna hai, ye set kiya
+  client.setCallback(callback);
 }
 
 void loop() {
   if (!client.connected()) {
     reconnect();
   }
-  client.loop(); // Hamesha check karte raho ki koi message aaya ya nahi
+  client.loop();
+
+  // Har 10 second me ek status message bhejo
+  delay(10000);
+  client.publish("esp32/status", "Main zinda hoon aur sun raha hoon!");
+  Serial.println("Status message bheja.");
 }
