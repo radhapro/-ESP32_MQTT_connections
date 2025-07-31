@@ -5,37 +5,51 @@
 // --- YE 2 LINE AAPKO BADALNI HAIN ---
 const char* ssid = "Robozz Lab";
 const char* password = "Robotics@cloud";
-  // ------------------------------------
+// ------------------------------------
 
 const char* mqtt_server = "broker.hivemq.com";
+
+// ESP32 ki neeli LED pin 2 par hoti hai
+const int ledPin = 2;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// YE FUNCTION TAB CHALEGA JAB KOI MESSAGE AAYEGA
+// YE FUNCTION TAB CHALEGA JAB KOI COMMAND AAYEGA
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Ek naya message aaya hai! Topic: ");
-  Serial.println(topic);
-
-  Serial.print("Message: ");
+  String message;
   for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
+    message += (char)payload[i];
   }
-  Serial.println();
-  Serial.println("-----------------------");
+  
+  Serial.print("Command aaya: ");
+  Serial.println(message);
+
+  // Check karo ki message kya hai
+  if (message == "motor on") {
+    Serial.println("LED ON kar raha hoon...");
+    digitalWrite(ledPin, HIGH); // LED ON karo
+    
+    // Turant status wapas bhejo
+    client.publish("esp32/motor/status", "motor on ho gi hai");
+
+  } else if (message == "motor off") {
+    Serial.println("LED OFF kar raha hoon...");
+    digitalWrite(ledPin, LOW); // LED OFF karo
+
+    // Turant status wapas bhejo
+    client.publish("esp32/motor/status", "motor off ho gi hai");
+  }
 }
 
-// Ye function dobara connect hone ki koshish karega
 void reconnect() {
   while (!client.connected()) {
     Serial.print("MQTT Broker se judne ki koshish...");
-    if (client.connect("Mera_ESP32_Full")) {
+    if (client.connect("ESP32_MotorController")) {
       Serial.println(" jud gaya!");
-      
-      // Connection judte hi, is channel ko sunna shuru kar do
-      client.subscribe("esp32/command");
-      Serial.println("Ab main 'esp32/command' topic ko sun raha hoon...");
-
+      // Command waale topic ko sunna shuru karo
+      client.subscribe("esp32/motor/command");
+      Serial.println("Ab main 'esp32/motor/command' topic ko sun raha hoon...");
     } else {
       Serial.print("failed, state=");
       Serial.print(client.state());
@@ -47,13 +61,15 @@ void reconnect() {
 
 void setup() {
   Serial.begin(115200);
-  delay(10);
+  pinMode(ledPin, OUTPUT); // LED pin ko Output ke liye set karo
+  
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println(" WiFi jud gaya!");
+  
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
 }
@@ -63,9 +79,4 @@ void loop() {
     reconnect();
   }
   client.loop();
-
-  // Har 10 second me ek status message bhejo
-  delay(10000);
-  client.publish("esp32/status", "Main zinda hoon aur sun raha hoon!");
-  Serial.println("Status message bheja.");
 }
